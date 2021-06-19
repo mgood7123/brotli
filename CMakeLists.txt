@@ -160,14 +160,7 @@ endfunction()
 transform_sources_list("scripts/sources.lst" "${CMAKE_CURRENT_BINARY_DIR}/sources.lst.cmake")
 include("${CMAKE_CURRENT_BINARY_DIR}/sources.lst.cmake")
 
-if(BROTLI_EMSCRIPTEN)
-  set(BROTLI_SHARED_LIBS "")
-else()
-  set(BROTLI_SHARED_LIBS brotlicommon brotlidec brotlienc)
-  add_library(brotlicommon SHARED ${BROTLI_COMMON_C})
-  add_library(brotlidec SHARED ${BROTLI_DEC_C})
-  add_library(brotlienc SHARED ${BROTLI_ENC_C})
-endif()
+# dont build shared libs
 
 set(BROTLI_STATIC_LIBS brotlicommon-static brotlidec-static brotlienc-static)
 add_library(brotlicommon-static STATIC ${BROTLI_COMMON_C})
@@ -177,13 +170,7 @@ add_library(brotlienc-static STATIC ${BROTLI_ENC_C})
 # Older CMake versions does not understand INCLUDE_DIRECTORIES property.
 include_directories(${BROTLI_INCLUDE_DIRS})
 
-foreach(lib IN LISTS BROTLI_SHARED_LIBS)
-  target_compile_definitions(${lib} PUBLIC "BROTLI_SHARED_COMPILATION" )
-  string(TOUPPER "${lib}" LIB)
-  set_target_properties (${lib} PROPERTIES DEFINE_SYMBOL "${LIB}_SHARED_COMPILATION")
-endforeach()
-
-foreach(lib IN LISTS BROTLI_SHARED_LIBS BROTLI_STATIC_LIBS)
+foreach(lib IN LISTS BROTLI_STATIC_LIBS)
   target_link_libraries(${lib} ${LIBM_LIBRARY})
   set_property(TARGET ${lib} APPEND PROPERTY INCLUDE_DIRECTORIES ${BROTLI_INCLUDE_DIRS})
   set_target_properties(${lib} PROPERTIES
@@ -194,11 +181,6 @@ foreach(lib IN LISTS BROTLI_SHARED_LIBS BROTLI_STATIC_LIBS)
   endif()
   set_property(TARGET ${lib} APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${BROTLI_INCLUDE_DIRS}")
 endforeach()
-
-if(NOT BROTLI_EMSCRIPTEN)
-target_link_libraries(brotlidec brotlicommon)
-target_link_libraries(brotlienc brotlicommon)
-endif()
 
 target_link_libraries(brotlidec-static brotlicommon-static)
 target_link_libraries(brotlienc-static brotlicommon-static)
@@ -214,38 +196,7 @@ if(BROTLI_PARENT_DIRECTORY)
   set(BROTLI_LIBRARIES "${BROTLI_LIBRARIES}" PARENT_SCOPE)
 endif()
 
-# Build the brotli executable
-add_executable(brotli ${BROTLI_CLI_C})
-target_link_libraries(brotli ${BROTLI_LIBRARIES_STATIC})
-
-# Installation
-if(NOT BROTLI_EMSCRIPTEN)
-if(NOT BROTLI_BUNDLED_MODE)
-  install(
-    TARGETS brotli
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-  )
-
-  install(
-    TARGETS ${BROTLI_LIBRARIES_CORE}
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-  )
-
-  install(
-    TARGETS ${BROTLI_LIBRARIES_CORE_STATIC}
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-  )
-
-  install(
-    DIRECTORY ${BROTLI_INCLUDE_DIRS}/brotli
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-  )
-endif()  # BROTLI_BUNDLED_MODE
-endif()  # BROTLI_EMSCRIPTEN
+# dont build executable
 
 # Tests
 
