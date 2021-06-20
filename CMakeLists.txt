@@ -160,17 +160,24 @@ endfunction()
 transform_sources_list("scripts/sources.lst" "${CMAKE_CURRENT_BINARY_DIR}/sources.lst.cmake")
 include("${CMAKE_CURRENT_BINARY_DIR}/sources.lst.cmake")
 
-# dont build shared libs
+# dont build static libs
 
-set(BROTLI_STATIC_LIBS brotlicommon-static brotlidec-static brotlienc-static)
-add_library(brotlicommon-static STATIC ${BROTLI_COMMON_C})
-add_library(brotlidec-static STATIC ${BROTLI_DEC_C})
-add_library(brotlienc-static STATIC ${BROTLI_ENC_C})
+if(BROTLI_EMSCRIPTEN)
+  set(BROTLI_SHARED_LIBS "")
+else()
+  set(BROTLI_SHARED_LIBS brotlicommon brotlidec brotlienc)
+  add_library(brotlicommon SHARED ${BROTLI_COMMON_C})
+  add_library(brotlidec SHARED ${BROTLI_DEC_C})
+  add_library(brotlienc SHARED ${BROTLI_ENC_C})
+endif()
 
 # Older CMake versions does not understand INCLUDE_DIRECTORIES property.
 include_directories(${BROTLI_INCLUDE_DIRS})
 
-foreach(lib IN LISTS BROTLI_STATIC_LIBS)
+foreach(lib IN LISTS BROTLI_SHARED_LIBS)
+  target_compile_definitions(${lib} PUBLIC "BROTLI_SHARED_COMPILATION" )
+  string(TOUPPER "${lib}" LIB)
+  set_target_properties (${lib} PROPERTIES DEFINE_SYMBOL "${LIB}_SHARED_COMPILATION")
   target_link_libraries(${lib} ${LIBM_LIBRARY})
   set_property(TARGET ${lib} APPEND PROPERTY INCLUDE_DIRECTORIES ${BROTLI_INCLUDE_DIRS})
   set_target_properties(${lib} PROPERTIES
@@ -182,8 +189,10 @@ foreach(lib IN LISTS BROTLI_STATIC_LIBS)
   set_property(TARGET ${lib} APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${BROTLI_INCLUDE_DIRS}")
 endforeach()
 
-target_link_libraries(brotlidec-static brotlicommon-static)
-target_link_libraries(brotlienc-static brotlicommon-static)
+if(NOT BROTLI_EMSCRIPTEN)
+  target_link_libraries(brotlidec brotlicommon)
+  target_link_libraries(brotlienc brotlicommon)
+endif()
 
 # For projects stuck on older versions of CMake, this will set the
 # BROTLI_INCLUDE_DIRS and BROTLI_LIBRARIES variables so they still
